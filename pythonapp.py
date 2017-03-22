@@ -9,7 +9,9 @@ from kivy.graphics import Color, Rectangle
 from kivy.config import Config
 
 
-
+from kivy.uix.button import Button
+from kivy.uix.popup import Popup
+from kivy.core.audio import SoundLoader
 pla_no =0
 amntx = 100
 amnty = 100
@@ -20,10 +22,12 @@ y2 =0
 xz=0
 yz=0
 q =0
-multx =1
-multy =1
-
-
+multx = 0
+multy =Window.width*0.025
+animsound = SoundLoader.load('anim.wav')
+laddersound = SoundLoader.load('ladder.wav')
+snakesound = SoundLoader.load('snake.wav')
+winner = 0
 Builder.load_string('''
 <Simple>:
     the_label: _the_label
@@ -38,16 +42,16 @@ Builder.load_string('''
                          
             Rectangle:
                 
-                source:'test.jpg'                
+                source:'background.jpg'                
                 size:root.width,root.height*0.9
                 
         Label:
             id: _the_label
-            size_hint: 0.05, 0.05
+            size_hint: 0.1, 0.1
             center_x: 0
             center_y: 0
             
-            bcolor: 0, 1, 1, 1
+            bcolor: 0.8, 0.5, 0.5, 0.9
             canvas.before:
                 Color:
                     rgba: self.bcolor
@@ -58,8 +62,8 @@ Builder.load_string('''
                 
         Label:
             id: _label1
-            bcolor:1,0,0,1
-            size_hint: 0.05, 0.05
+            bcolor:0.1,0.55,0.55,0.9
+            size_hint: 0.1, 0.1
             center_x: 0
             center_y: 0
                
@@ -113,6 +117,7 @@ class player:
        self.win = 0
        self.name = name
    def rolldice(self):
+       global pla_no,winner
        self.before = self.score
        randominteger = rand.randint(1,6)
        self.score = self.score+randominteger
@@ -120,6 +125,7 @@ class player:
        if(self.score>100):
            self.score = self.score- randominteger
        elif(self.score == 100):
+           winner = pla_no+1
            win = 1
            print(self.name+'won')
        print(self.name+':'+str(self.score))                     
@@ -128,8 +134,7 @@ class player:
    def updateanimparam(self):
        global x1,y1,x2,y2,xz,yz
        a = self.score
-       multx = (Window.width/10)
-       multy = Window.height*0.9/10
+       
        dig0 = (a%10)
        a = a/10
        dig1 = (a%10)
@@ -194,14 +199,22 @@ class player:
 
 
 class Simple(BoxLayout):
+    p1 = player('player1')
+    p2= player('player2')
     
     the_label = ObjectProperty(None)
     label1 = ObjectProperty(None)
     sometext = NumericProperty(5)
-    p1 = player('player1')
-    p2= player('player2')
+    
+        
+    popup1 = Popup(title='******************************', content=Button(text = 'player 1 won \n start new game'), auto_dismiss=False,size = (Window.width,Window.height))
+    popup2 = Popup(title='******************************', content=Button(text = 'player 2 won \n start new game'), auto_dismiss=False,size = (Window.width,Window.height))
+    popup1.content.bind(on_press= popup1.dismiss)
+    popup2.content.bind(on_press= popup2.dismiss)    
+    
     def mainfunction(self):
-        global pla_no
+        global pla_no,winner,q
+        animation = Animation(pos=(0,0),duration = 0.00001)
         if(pla_no ==0):
             self.p1.rolldice()
             self.p1.updateanimparam()
@@ -211,49 +224,95 @@ class Simple(BoxLayout):
         if(q==1):
             print("player 1",self.p1.before,self.p1.diff,self.p1.score)
             print("player 2",self.p2.before,self.p2.diff,self.p2.score)
-        
-        self.animate()
-       
+        if(winner==0):
+            self.animate()
+            return
+        elif(winner ==1):            
+            pla_no = 0
+            q=0
+            winner =0
+            x1 = x2=xz=y1=y2=yz =0
+            self.p1.score = self.p2.score = self.p1.diff = self.p2.diff = self.p1.before = self.p2.before = 0
+            animation.start(self.the_label)
+            animation.start(self.label1)
+            self.popup1.open()            
+            return
+        elif(winner ==2):           
+            pla_no = 0
+            q=0
+            winner =0
+            x1 = x2=xz=y1=y2=yz =0
+            self.p1.score = self.p2.score = self.p1.diff = self.p2.diff = self.p1.before = self.p2.before = 0
+            animation.start(self.the_label)
+            animation.start(self.label1)
+            self.popup2.open()   
+            return
+            
+    def playsound(self):
+        global animsound
+        animsound.play()
+        return
 
     def animate(self):
-        global x1,y1,x2,y2,xz,yz,q
+        global x1,y1,x2,y2,xz,yz,q,animsound,snakesound,laddersound,multx
         global pla_no
+        x1 = x1+multx
+        y1 = y1+multx
+        xz = xz+multx
+        yz = yz+multx
+        x2 = x2+multx
+        y2 = y2+multx
+        
         if(pla_no ==0):
             if(q==0):
-                anim = Animation(pos=(x1,y1))
-                anim = anim+Animation(pos=(x2,y2))
                 
+                anim = Animation(pos=(x1,y1))
+                
+                anim = anim+Animation(pos=(x2,y2),duration = 0.5)
+                
+                
+                
+                
+              
                 anim.start(self.the_label)
+                
+                
                 print('from',(x1,y1),'to',(x2,y2))
                 pla_no =1
                 
             else:
                 print('sanke/ladder')
                 anim = Animation(pos=(x1,y1))
-                anim += Animation(pos=(100,100))
-                anim = Animation(pos=(100,100))
-                anim += Animation(pos=(x2,y2))
+                anim += Animation(pos=(xz,yz),duration = 0.5)
+                anim += Animation(pos=(x2,y2),duration = 0.5)
+                anim.start(self.the_label)
+               
                 q=0
                 pla_no =1
         else:
             if(q==0):
                 pla_no =0
                 anim = Animation(pos=(x1,y1))
-                anim += Animation(pos=(x2,y2))
+                anim += Animation(pos=(x2,y2),duration = 0.5)
                 print('from',(x1,y1),'to',(x2,y2))
                 anim.start(self.label1)
             else:
                 q=0
                 anim = Animation(pos=(x1,y1))
-                anim += Animation(pos=(xz,yz))
-                anim += Animation(pos=(x2,y2))
+                anim += Animation(pos=(xz,yz),duration = 0.5)
+                anim += Animation(pos=(x2,y2),duration = 0.5)
+                anim.start(self.label1)
                 pla_no =0
                 print('sanke/ladder')
         return        
-                
-    def inc(self, instance, value):
-        self.sometext += 5 
-
+    def restart(self,popup):
+        global winner,q,pla_no
+        pla_no = 0
+        q=0
+        winner =0
+        x1 = x2=xz=y1=y2=yz =0
+        self.p1.score = self.p2.score = self.p1.diff = self.p2.diff = self.p1.before = self.p2.diff = 0
+        popup.dismiss()
 class TApp(App):
     def build(self):
         Window.size = (450,500)
